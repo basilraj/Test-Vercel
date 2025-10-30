@@ -22,16 +22,21 @@ export default async function (req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, message: 'Valid email is required.' });
   }
   // Optional phone validation (basic format check)
-  if (phone && typeof phone !== 'string' && !/^\+?[1-9]\d{1,14}$/.test(phone)) {
+  // The regex /^\+?[1-9]\d{1,14}$/ is for E.164 format, which is very strict.
+  // For optional phone, an empty string should be allowed.
+  if (phone && typeof phone !== 'string') {
     return res.status(400).json({ success: false, message: 'Invalid phone number format.' });
   }
+  if (phone && !/^\+?[1-9]\d{7,14}$/.test(phone.trim()) && phone.trim() !== '') {
+    // A slightly more lenient phone regex for international numbers
+    return res.status(400).json({ success: false, message: 'Invalid phone number format (e.g., +15551234567).' });
+  }
+
 
   // Initialize client inside the handler for serverless best practices
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // Required for Neon free tier connections
-    },
+    ssl: true, // Enforce SSL for secure connection to Neon
   });
 
   try {
@@ -49,7 +54,7 @@ export default async function (req: VercelRequest, res: VercelResponse) {
 
     await client.query(
       'INSERT INTO feedback(name, email, phone) VALUES($1, $2, $3) RETURNING *',
-      [name, email, phone || null] // Ensure phone is null if empty string or undefined
+      [name, email, phone === '' ? null : phone || null] // Ensure phone is null if empty string or undefined
     );
 
     res.status(200).json({ success: true, message: 'Feedback submitted successfully!' });
