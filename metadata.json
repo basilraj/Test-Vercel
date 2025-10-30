@@ -1,0 +1,5 @@
+{
+  "name": "User Feedback Form",
+  "description": "A simple user feedback form for collecting name, email, and phone number, powered by React, Tailwind CSS, and a Neon PostgreSQL backend.",
+  "requestFramePermissions": []
+}
